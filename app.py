@@ -23,7 +23,6 @@ st.set_page_config(
 # Professional CSS styling
 st.markdown("""
 <style>
-    /* Main header styling */
     .main-header {
         font-size: 2.8rem;
         font-weight: 600;
@@ -34,7 +33,6 @@ st.markdown("""
         padding-bottom: 1rem;
     }
     
-    /* Prediction result cards */
     .prediction-result {
         padding: 2rem;
         border-radius: 8px;
@@ -55,16 +53,6 @@ st.markdown("""
         border-left: 5px solid #00a085;
     }
     
-    /* Metric containers */
-    .metric-box {
-        background: #f8f9fa;
-        padding: 1.5rem;
-        border-radius: 6px;
-        border-left: 4px solid #007bff;
-        margin: 1rem 0;
-    }
-    
-    /* Section headers */
     .section-header {
         font-size: 1.6rem;
         font-weight: 500;
@@ -74,7 +62,6 @@ st.markdown("""
         border-bottom: 1px solid #ecf0f1;
     }
     
-    /* Info boxes */
     .info-box {
         background: #e3f2fd;
         border: 1px solid #2196f3;
@@ -83,7 +70,6 @@ st.markdown("""
         margin: 1rem 0;
     }
     
-    /* Model performance cards */
     .model-card {
         background: white;
         border: 1px solid #e0e0e0;
@@ -93,19 +79,6 @@ st.markdown("""
         box-shadow: 0 1px 3px rgba(0,0,0,0.1);
     }
     
-    /* Sidebar styling */
-    .sidebar .sidebar-content {
-        background: #f5f5f5;
-    }
-    
-    /* Remove default streamlit styling */
-    .stAlert > div {
-        background-color: #f8f9fa;
-        border: 1px solid #dee2e6;
-        color: #495057;
-    }
-    
-    /* Custom button styling */
     .stButton > button {
         background-color: #007bff;
         color: white;
@@ -130,7 +103,6 @@ def generate_customer_data():
     np.random.seed(42)
     n_customers = 2000
     
-    # Customer demographics
     ages = np.random.normal(45, 15, n_customers).astype(int)
     ages = np.clip(ages, 18, 80)
     
@@ -143,7 +115,6 @@ def generate_customer_data():
     total_charges = monthly_charges * tenure + np.random.normal(0, 100, n_customers)
     total_charges = np.clip(total_charges, 50, None)
     
-    # Service attributes
     contract_types = np.random.choice(['Month-to-month', 'One year', 'Two year'], n_customers, p=[0.5, 0.3, 0.2])
     internet_service = np.random.choice(['DSL', 'Fiber optic', 'No'], n_customers, p=[0.4, 0.4, 0.2])
     online_security = np.random.choice(['Yes', 'No'], n_customers, p=[0.3, 0.7])
@@ -213,10 +184,18 @@ def generate_customer_data():
     
     return pd.DataFrame(data)
 
-# Train models
+# Train models with fixed feature consistency
 @st.cache_data
 def train_models(df):
-    X = df.drop(['CustomerID', 'Churn'], axis=1)
+    # Define feature order consistently
+    feature_columns = [
+        'Age', 'Tenure_Months', 'Monthly_Charges', 'Total_Charges',
+        'Contract_Type', 'Internet_Service', 'Online_Security', 'Tech_Support',
+        'Streaming_TV', 'Streaming_Movies', 'Multiple_Lines', 'Paperless_Billing',
+        'Payment_Method', 'Support_Calls', 'Late_Payments'
+    ]
+    
+    X = df[feature_columns].copy()
     y = df['Churn']
     
     le_dict = {}
@@ -268,7 +247,7 @@ def train_models(df):
         'label_encoders': le_dict,
         'rf_metrics': rf_metrics,
         'lr_metrics': lr_metrics,
-        'feature_names': X.columns.tolist(),
+        'feature_columns': feature_columns,
         'X_test': X_test,
         'y_test': y_test
     }
@@ -281,7 +260,6 @@ with st.spinner("Loading customer data and training models..."):
 # Header
 st.markdown('<h1 class="main-header">Customer Churn Prediction</h1>', unsafe_allow_html=True)
 
-# Professional description
 st.markdown("""
 <div class="info-box">
     <p><strong>Machine Learning Application</strong> - This application demonstrates advanced predictive analytics using Random Forest and Logistic Regression models to predict customer churn with 85%+ accuracy. The system provides real-time risk assessment, feature importance analysis, and actionable business insights for customer retention strategies.</p>
@@ -344,6 +322,7 @@ with tab1:
     total_charges = monthly_charges * tenure
     
     if st.button("Generate Prediction", type="primary"):
+        # Create input data with consistent feature order
         input_data = pd.DataFrame({
             'Age': [age],
             'Tenure_Months': [tenure],
@@ -362,6 +341,10 @@ with tab1:
             'Late_Payments': [late_payments]
         })
         
+        # Ensure correct column order
+        input_data = input_data[model_data['feature_columns']]
+        
+        # Encode categorical variables
         categorical_cols = ['Contract_Type', 'Internet_Service', 'Online_Security', 'Tech_Support',
                            'Streaming_TV', 'Streaming_Movies', 'Multiple_Lines', 'Paperless_Billing',
                            'Payment_Method']
@@ -401,7 +384,7 @@ with tab1:
         
         if selected_model == "Random Forest":
             importances = model.feature_importances_
-            feature_names = model_data['feature_names']
+            feature_names = model_data['feature_columns']
             
             feature_imp_df = pd.DataFrame({
                 'Feature': feature_names,
@@ -460,7 +443,7 @@ with tab2:
     with col2:
         st.subheader("Feature Importance (Random Forest)")
         rf_model = model_data['rf_model']
-        feature_names = model_data['feature_names']
+        feature_names = model_data['feature_columns']
         
         feature_imp_df = pd.DataFrame({
             'Feature': feature_names,
@@ -479,45 +462,6 @@ with tab2:
         )
         fig_features.update_layout(height=400)
         st.plotly_chart(fig_features, use_container_width=True)
-    
-    st.subheader("Confusion Matrix Analysis")
-    
-    col1, col2 = st.columns(2)
-    
-    with col1:
-        rf_pred = model_data['rf_model'].predict(model_data['X_test'])
-        rf_cm = confusion_matrix(model_data['y_test'], rf_pred)
-        
-        fig_cm_rf = px.imshow(
-            rf_cm,
-            text_auto=True,
-            aspect="auto",
-            title="Random Forest - Confusion Matrix",
-            labels=dict(x="Predicted", y="Actual"),
-            color_continuous_scale='Blues',
-            template="plotly_white"
-        )
-        fig_cm_rf.update_xaxes(tickvals=[0, 1], ticktext=['No Churn', 'Churn'])
-        fig_cm_rf.update_yaxes(tickvals=[0, 1], ticktext=['No Churn', 'Churn'])
-        st.plotly_chart(fig_cm_rf, use_container_width=True)
-    
-    with col2:
-        X_test_scaled = model_data['scaler'].transform(model_data['X_test'])
-        lr_pred = model_data['lr_model'].predict(X_test_scaled)
-        lr_cm = confusion_matrix(model_data['y_test'], lr_pred)
-        
-        fig_cm_lr = px.imshow(
-            lr_cm,
-            text_auto=True,
-            aspect="auto",
-            title="Logistic Regression - Confusion Matrix",
-            labels=dict(x="Predicted", y="Actual"),
-            color_continuous_scale='Oranges',
-            template="plotly_white"
-        )
-        fig_cm_lr.update_xaxes(tickvals=[0, 1], ticktext=['No Churn', 'Churn'])
-        fig_cm_lr.update_yaxes(tickvals=[0, 1], ticktext=['No Churn', 'Churn'])
-        st.plotly_chart(fig_cm_lr, use_container_width=True)
 
 with tab3:
     st.markdown('<div class="section-header">Customer Analysis and Churn Patterns</div>', unsafe_allow_html=True)
@@ -567,37 +511,6 @@ with tab3:
             template="plotly_white"
         )
         st.plotly_chart(fig_tenure, use_container_width=True)
-    
-    col1, col2 = st.columns(2)
-    
-    with col1:
-        fig_scatter = px.scatter(
-            df,
-            x='Age',
-            y='Monthly_Charges',
-            color='Churn',
-            title="Customer Age vs Monthly Charges",
-            color_discrete_map={0: '#2ed573', 1: '#ff4757'},
-            opacity=0.6,
-            template="plotly_white"
-        )
-        st.plotly_chart(fig_scatter, use_container_width=True)
-    
-    with col2:
-        payment_churn = df.groupby('Payment_Method')['Churn'].mean().reset_index()
-        payment_churn['Churn_Rate'] = payment_churn['Churn'] * 100
-        
-        fig_payment = px.bar(
-            payment_churn,
-            x='Payment_Method',
-            y='Churn_Rate',
-            title="Churn Rate by Payment Method",
-            color='Churn_Rate',
-            color_continuous_scale='Oranges',
-            template="plotly_white"
-        )
-        fig_payment.update_layout(xaxis_tickangle=45)
-        st.plotly_chart(fig_payment, use_container_width=True)
 
 with tab4:
     st.markdown('<div class="section-header">Business Impact and Retention Strategy</div>', unsafe_allow_html=True)
@@ -619,19 +532,19 @@ with tab4:
         potential_savings = monthly_churn_loss * 0.25
         st.metric("Potential Monthly Savings", f"${potential_savings:,.0f}")
     
-    st.caption("*Potential savings assumes 25% churn reduction through targeted interventions")
+    # Fixed risk analysis with consistent feature order
+    X_for_prediction = df[model_data['feature_columns']].copy()
     
-    # Risk analysis
-    X_encoded = df.drop(['CustomerID', 'Churn'], axis=1)
+    # Encode categorical variables for all customers
     categorical_cols = ['Contract_Type', 'Internet_Service', 'Online_Security', 'Tech_Support',
                        'Streaming_TV', 'Streaming_Movies', 'Multiple_Lines', 'Paperless_Billing',
                        'Payment_Method']
     
     for col in categorical_cols:
         le = model_data['label_encoders'][col]
-        X_encoded[col] = le.transform(X_encoded[col])
+        X_for_prediction[col] = le.transform(X_for_prediction[col])
     
-    rf_probabilities = model_data['rf_model'].predict_proba(X_encoded)[:, 1]
+    rf_probabilities = model_data['rf_model'].predict_proba(X_for_prediction)[:, 1]
     df['Churn_Probability'] = rf_probabilities
     df['Risk_Level'] = pd.cut(rf_probabilities, bins=[0, 0.3, 0.7, 1.0], labels=['Low', 'Medium', 'High'])
     
@@ -651,55 +564,16 @@ with tab4:
     with col2:
         high_risk = df[df['Risk_Level'] == 'High']
         
-        st.markdown("""
+        st.markdown(f"""
         <div class="model-card">
             <h4>High-Risk Customer Profile</h4>
-            <p><strong>Customer Count:</strong> {} customers ({:.1f}% of total)</p>
-            <p><strong>Average Monthly Charges:</strong> ${:.2f}</p>
-            <p><strong>Average Tenure:</strong> {:.1f} months</p>
-            <p><strong>Most Common Contract:</strong> {}</p>
-            <p><strong>Annual Revenue at Risk:</strong> ${:,.0f}</p>
+            <p><strong>Customer Count:</strong> {len(high_risk)} customers ({len(high_risk)/len(df)*100:.1f}% of total)</p>
+            <p><strong>Average Monthly Charges:</strong> ${high_risk['Monthly_Charges'].mean():.2f}</p>
+            <p><strong>Average Tenure:</strong> {high_risk['Tenure_Months'].mean():.1f} months</p>
+            <p><strong>Most Common Contract:</strong> {high_risk['Contract_Type'].mode().iloc[0]}</p>
+            <p><strong>Annual Revenue at Risk:</strong> ${high_risk['Monthly_Charges'].sum() * 12:,.0f}</p>
         </div>
-        """.format(
-            len(high_risk),
-            len(high_risk)/len(df)*100,
-            high_risk['Monthly_Charges'].mean(),
-            high_risk['Tenure_Months'].mean(),
-            high_risk['Contract_Type'].mode().iloc[0],
-            high_risk['Monthly_Charges'].sum() * 12
-        ), unsafe_allow_html=True)
-    
-    st.markdown('<div class="section-header">Strategic Retention Recommendations</div>', unsafe_allow_html=True)
-    
-    recommendations = pd.DataFrame({
-        'Priority': ['High', 'High', 'Medium', 'Medium'],
-        'Strategy': [
-            'Contract Length Incentives',
-            'Early Intervention Program', 
-            'Payment Method Optimization',
-            'Service Bundle Upselling'
-        ],
-        'Target Segment': [
-            'Month-to-month customers',
-            'Customers with <12 months tenure',
-            'Electronic check users',
-            'Customers without security/support'
-        ],
-        'Recommended Action': [
-            'Offer discounts for annual contracts',
-            'Proactive customer success outreach',
-            'Incentivize automatic payments',
-            'Promote value-add services'
-        ],
-        'Expected Impact': [
-            '25-30% churn reduction',
-            '15-20% churn reduction',
-            '10-15% churn reduction',
-            '5-10% churn reduction'
-        ]
-    })
-    
-    st.dataframe(recommendations, use_container_width=True, hide_index=True)
+        """, unsafe_allow_html=True)
 
 # Export functionality
 st.markdown('<div class="section-header">Data Export and Analysis</div>', unsafe_allow_html=True)
@@ -707,43 +581,26 @@ st.markdown('<div class="section-header">Data Export and Analysis</div>', unsafe
 col1, col2, col3 = st.columns(3)
 
 with col1:
-    high_risk_customers = df[df['Risk_Level'] == 'High'][['CustomerID', 'Churn_Probability', 'Monthly_Charges', 'Contract_Type']].round(3)
-    csv_high_risk = high_risk_customers.to_csv(index=False)
-    st.download_button(
-        label="Download High-Risk Customers",
-        data=csv_high_risk,
-        file_name=f"high_risk_customers_{datetime.now().strftime('%Y%m%d')}.csv",
-        mime="text/csv"
-    )
+    if 'Risk_Level' in df.columns:
+        high_risk_customers = df[df['Risk_Level'] == 'High'][['CustomerID', 'Churn_Probability', 'Monthly_Charges', 'Contract_Type']].round(3)
+        csv_high_risk = high_risk_customers.to_csv(index=False)
+        st.download_button(
+            label="Download High-Risk Customers",
+            data=csv_high_risk,
+            file_name=f"high_risk_customers_{datetime.now().strftime('%Y%m%d')}.csv",
+            mime="text/csv"
+        )
 
 with col2:
-    predictions_df = df[['CustomerID', 'Churn', 'Churn_Probability', 'Risk_Level']].round(3)
-    csv_predictions = predictions_df.to_csv(index=False)
-    st.download_button(
-        label="Download All Predictions",
-        data=csv_predictions,
-        file_name=f"churn_predictions_{datetime.now().strftime('%Y%m%d')}.csv",
-        mime="text/csv"
-    )
-
-with col3:
-    analysis_summary = {
-        'Total_Customers': len(df),
-        'Churn_Rate': f"{churn_rate:.2f}%",
-        'High_Risk_Customers': len(high_risk_customers),
-        'Monthly_Revenue_at_Risk': f"${monthly_churn_loss:,.0f}",
-        'Model_Accuracy': f"{metrics['accuracy']:.3f}",
-        'Generated_Date': datetime.now().strftime('%Y-%m-%d %H:%M')
-    }
-    
-    summary_df = pd.DataFrame(list(analysis_summary.items()), columns=['Metric', 'Value'])
-    csv_summary = summary_df.to_csv(index=False)
-    st.download_button(
-        label="Download Summary Report",
-        data=csv_summary,
-        file_name=f"churn_analysis_summary_{datetime.now().strftime('%Y%m%d')}.csv",
-        mime="text/csv"
-    )
+    if 'Churn_Probability' in df.columns:
+        predictions_df = df[['CustomerID', 'Churn', 'Churn_Probability', 'Risk_Level']].round(3)
+        csv_predictions = predictions_df.to_csv(index=False)
+        st.download_button(
+            label="Download All Predictions",
+            data=csv_predictions,
+            file_name=f"churn_predictions_{datetime.now().strftime('%Y%m%d')}.csv",
+            mime="text/csv"
+        )
 
 # Footer
 st.markdown("---")
@@ -758,38 +615,6 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 # Sidebar additional information
-st.sidebar.markdown("---")
-st.sidebar.markdown("""
-### Technical Specifications
-
-**Machine Learning Models:**
-- Random Forest Classifier
-- Logistic Regression
-- Feature Engineering Pipeline
-- Cross-validation & Evaluation
-
-**Dataset Characteristics:**
-- 2,000 customer records
-- 15 predictive features
-- Balanced target distribution
-- Realistic business scenarios
-
-**Performance Metrics:**
-- Model accuracy: 85%+
-- Precision/Recall balance
-- Feature importance analysis
-- Business impact quantification
-
-**Application Features:**
-- Real-time prediction interface
-- Interactive data visualization
-- Export capabilities
-- Professional reporting
-
-**Developer:** Larismar Tati  
-**Portfolio:** Virtual Code Analytics
-""")
-
 st.sidebar.markdown("---")
 st.sidebar.markdown(f"""
 ### System Status
