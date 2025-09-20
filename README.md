@@ -224,7 +224,7 @@ The application is designed for seamless cloud deployment on Streamlit Cloud, He
 **Developer:** Larismar Tati  
 **Portfolio:** Virtual Code Analytics  
 **Professional Profile:** [LinkedIn](https://linkedin.com/in/larismar-bacana-32b227251)  
-**Source Code:** [GitHub Repository](https://github.com/LJAT14)  
+**Source Code:** [GitHub Repository](https://github.com/LJAT14customer-churn-prediction)  
 
 ## License and Usage
 
@@ -234,3 +234,4 @@ This project is available under the MIT License for educational and professional
 
 
 **Professional Note:** This application represents a comprehensive demonstration of machine learning engineering, data science methodology, and business intelligence capabilities suitable for senior-level data science and analytics roles in customer-focused industries.
+
