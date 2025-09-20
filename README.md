@@ -3,7 +3,7 @@
 A comprehensive machine learning application for predicting customer churn using advanced analytics and predictive modeling. Built with Python, Streamlit, and scikit-learn to deliver actionable business insights for customer retention strategies.
 
 ## Live Application
-**Demo URL:** [View Live Application](https://your-app-name.streamlit.app)
+**Demo URL:** [View Live Application](https://lariscustomerchurnprediction.streamlit.app/)
 
 ## Executive Summary
 
@@ -231,5 +231,6 @@ The application is designed for seamless cloud deployment on Streamlit Cloud, He
 This project is available under the MIT License for educational and professional portfolio purposes. Commercial usage requires explicit permission.
 
 ---
+
 
 **Professional Note:** This application represents a comprehensive demonstration of machine learning engineering, data science methodology, and business intelligence capabilities suitable for senior-level data science and analytics roles in customer-focused industries.
